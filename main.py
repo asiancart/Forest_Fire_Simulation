@@ -1,137 +1,106 @@
 import sys
 
-EMPTY_SPACE = "."
-PLAYER_X = "X"
-PLAYER_O = "O"
+print("Water Bucket by asiancart")
 
-BOARD_WIDTH = 7
-BOARD_HEIGHT = 6
-COLUMN_LABELS = ("1","2","3","4","5","6","7")
-assert len(COLUMN_LABELS) == BOARD_WIDTH
+Goal = 4
+steps = 0
 
-def main():
-    print("""Four in a row by asiancart. Two players take turns dropping tiles into one of seven columns, trying to make four in a row horizontally, vertically, or diagonally.""")
+waterInBucket = {"8":0,"5":0,"3":0}
 
-    gameBoard = getNewBoard()
-    playerTurn = PLAYER_X
+while True:
+    print()
+    print("Try to get "+str(Goal)+ "L of water into one of these")
+    print("buckets:")
 
-    while True:
-        displayBoard(gameBoard)
-        playerMove = askForPlayerMove(playerTurn,gameBoard)
-        gameBoard[playerMove] = playerTurn
+    waterDisplay = []
+    for i in range(1,9):
+        if waterInBucket["8"] < i:
+            waterDisplay.append("      ")
+        else:
+            waterDisplay.append("WWWWWW")
 
-        if isWinner(playerTurn,gameBoard):
-            displayBoard(gameBoard)
-            print("Player "+playerTurn+ " has won!")
-            sys.exit()
-        elif isFull(gameBoard):
-            displayBoard(gameBoard)
-            print("There is a tie")
-            sys.exit()
+    for i in range(1,6):
+        if waterInBucket["5"] <i:
+            waterDisplay.append("      ")
+        else:
+            waterDisplay.append("WWWWWW")
 
-        if playerTurn == PLAYER_X:
-            playerTurn=PLAYER_O
-        elif playerTurn == PLAYER_O:
-            playerTurn = PLAYER_X
-
-def getNewBoard():
-    """Returns a dictionary that represents a Four in a Row board. The keys are (columnIndex, rowIndex) tuples of two integers, and the values are one of the 'X', 'O' or '.' (empty space) strings."""
-    board = {}
-    for columnIndex in range(BOARD_WIDTH):
-        for rowIndex in range(BOARD_HEIGHT):
-            board[(columnIndex,rowIndex)] = EMPTY_SPACE
-    return board
-
-def displayBoard(board):
-    """Display the board and its tiles on the screen."""
-    tileChars = []
-    for rowIndex in range(BOARD_HEIGHT):
-        for columnIndex in range(BOARD_WIDTH):
-            tileChars.append(board[(columnIndex,rowIndex)])
+    for i in range(1,4):
+        if waterInBucket["3"] < i:
+            waterDisplay.append("      ")
+        else:
+            waterDisplay.append("WWWWWW")
 
     print("""
-     1234567
-    +-------+
-    |{}{}{}{}{}{}{}|
-    |{}{}{}{}{}{}{}|
-    |{}{}{}{}{}{}{}|
-    |{}{}{}{}{}{}{}|
-    |{}{}{}{}{}{}{}|
-    |{}{}{}{}{}{}{}|
-    +-------+""".format(*tileChars))
+    8|{7}|
+    7|{6}|
+    6|{5}|
+    5|{4}| 5|{12}|
+    4|{3}| 4|{11}|
+    3|{2}| 3|{10}| 3|{15}|
+    2|{1}| 2|{9}| 2|{14}|
+    1|{0}| 1|{8}| 1|{13}|
+     +------+ +------+ +------+
+        8L       5L       3L          
+    """.format(*waterDisplay))
 
-
-def askForPlayerMove(playerTile,board):
-    """Let a player select a column on the board to drop a tile into.Returns a tuple of the (column, row) that the tile falls into."""
-    while True:
-        print("Player {}, enter a column or QUIT:".format(playerTile))
-        response = input("> ").upper().strip()
-
-        if response == "QUIT":
-            print("Thanks for playing.")
+    for waterAmount in waterInBucket.values():
+        if waterAmount == Goal:
+            print("Good job! You solved it in",steps, "steps!")
             sys.exit()
 
-        if response not in COLUMN_LABELS:
-            print("Enter a number from 1 to {}.".format(BOARD_WIDTH))
-            continue
+    print("You can:")
+    print("  (F)ill the bucket")
+    print("  (E)mpty the bucket")
+    print("  (P)our one bucket into another")
+    print("  (Q)uit")
 
-        columnIndex = int(response)-1
+    while True:
+        move = input("> ").upper()
+        if move == "QUIT" or move == "Q":
+            print("Thanks for playing!")
+            sys.exit()
 
-        if board[(columnIndex,0)] != EMPTY_SPACE:
-            print("That column is full , select another one.")
-            continue
+        if move in ("F","E","P"):
+            break
+        print("Enter F,E,P or Q")
 
-        for rowIndex in range(BOARD_HEIGHT-1,-1,-1):
-            if board[(columnIndex,rowIndex)] == EMPTY_SPACE:
-                return (columnIndex,rowIndex)
+    while True:
+        print("Select a bucket 8,5,3 or QUIT")
+        srcBucket = input("> ").upper()
 
-def isFull(board):
-    """Returns True if the `board` has no empty spaces, otherwise return False."""
-    for rowIndex in range(BOARD_HEIGHT):
-        for columnIndex in range(BOARD_WIDTH):
-            if board[(columnIndex,rowIndex)] == EMPTY_SPACE:
-                return False
-    return True
+        if srcBucket == "QUIT":
+            print("Thanks for playing!")
+            sys.exit()
 
-def isWinner(playerTile,board):
-    """Returns True if `playerTile` has four tiles in a row on `board`,otherwise returns False."""
-    for columnIndex in range(BOARD_WIDTH-3):
-        for rowIndex in range(BOARD_HEIGHT):
-            tile1 = board[(columnIndex,rowIndex)]
-            tile2 = board[(columnIndex+1,rowIndex)]
-            tile3 = board[(columnIndex+2,rowIndex)]
-            tile4 = board[(columnIndex+3,rowIndex)]
-            if tile1 == tile2 == tile3 == tile4 == playerTile:
-                return True
+        if srcBucket in ("8","5","3"):
+            break
 
-    for columnIndex in range(BOARD_WIDTH):
-        for rowIndex in range(BOARD_HEIGHT-3):
-            tile1 = board[(columnIndex,rowIndex)]
-            tile2 = board[(columnIndex,rowIndex+1)]
-            tile3 = board[(columnIndex,rowIndex+2)]
-            tile4 = board[(columnIndex,rowIndex+3)]
-            if tile1 == tile2 == tile3 == tile4 == playerTile:
-                return True
+    if move == "F":
+        srcBucketSize = int(srcBucket)
+        waterInBucket[srcBucket] = srcBucketSize
+        steps += 1
 
-    for columnIndex in range(BOARD_WIDTH-3):
-        for rowIndex in range(BOARD_HEIGHT-3):
-            tile1 = board[(columnIndex,rowIndex)]
-            tile2 = board[(columnIndex+1,rowIndex+1)]
-            tile3 = board[(columnIndex+2,rowIndex+2)]
-            tile4 = board[(columnIndex+3,rowIndex+3)]
-            if tile1 == tile2 == tile3 == tile4 == playerTile:
-                return True
+    elif move == "E":
+        waterInBucket[srcBucket] = 0
+        steps +=1
 
-            tile1 = board[(columnIndex+3,rowIndex)]
-            tile2 = board[(columnIndex+2,rowIndex+1)]
-            tile3 = board[(columnIndex+1,rowIndex+2)]
-            tile4 = board[(columnIndex, rowIndex + 3)]
-            if tile1 == tile2 == tile3 == tile4 == playerTile:
-                return True
-    return False
+    elif move == "P":
+        while True:
+            print("Select a bucket to pour into: 8,5 or 3")
+            dstBucket = input("> ").upper()
+            if dstBucket in ("8","5","3"):
+                break
 
+        dstBucketSize = int(dstBucket)
+        emptySpaceInDstBucket = dstBucketSize - waterInBucket[dstBucket]
+        waterInSrcBucket = waterInBucket[srcBucket]
+        amountToPour = min(emptySpaceInDstBucket,waterInSrcBucket)
 
-if __name__ == "__main__":
-    main()
+        waterInBucket[srcBucket] -= amountToPour
 
+        waterInBucket[dstBucket] += amountToPour
+        steps += 1
 
+    elif move == "C":
+        pass
