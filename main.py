@@ -1,106 +1,186 @@
-import sys
+import random , sys
 
-print("Water Bucket by asiancart")
+BLANK = ""
 
-Goal = 4
-steps = 0
+def main():
+    print("""2048 game by asiancart""")
 
-waterInBucket = {"8":0,"5":0,"3":0}
+    input("Press enter to begin")
+    gameBoard = getNewBoard()
+    while True:
+        drawBoard(gameBoard)
+        print("Score:",getScore(gameBoard))
+        playerMove = askForPlayerMove()
+        gameBoard = makeMove(gameBoard,playerMove)
+        addTwoToBoard(gameBoard)
+        if isFull(gameBoard):
+            drawBoard(gameBoard)
+            print("Game over - Thanks for playing")
+            sys.exit()
 
-while True:
-    print()
-    print("Try to get "+str(Goal)+ "L of water into one of these")
-    print("buckets:")
 
-    waterDisplay = []
-    for i in range(1,9):
-        if waterInBucket["8"] < i:
-            waterDisplay.append("      ")
-        else:
-            waterDisplay.append("WWWWWW")
+def getNewBoard():
+    """Returns a new data structure that represents a board.It's a dictionary with keys of (x, y) tuples and values of the tile at that space. The tile is either a power-of-two integer or BLANK.The coordinates are laid out as:
+     X0 1 2 3
+    Y+-+-+-+-+
+    0| | | | |
+     +-+-+-+-+
+    1| | | | |
+     +-+-+-+-+
+    2| | | | |
+     +-+-+-+-+
+    3| | | | |
+     +-+-+-+-+"""
 
-    for i in range(1,6):
-        if waterInBucket["5"] <i:
-            waterDisplay.append("      ")
-        else:
-            waterDisplay.append("WWWWWW")
+    newBoard = {}
+    for x in range(4):
+        for y in range(4):
+            newBoard[(x,y)] = BLANK
 
-    for i in range(1,4):
-        if waterInBucket["3"] < i:
-            waterDisplay.append("      ")
-        else:
-            waterDisplay.append("WWWWWW")
+    startingTwosPlaced = 0
+    while startingTwosPlaced < 2:
+        randomSpace = (random.randint(0,3),random.randint(0,3))
+        if newBoard[randomSpace] == BLANK:
+            newBoard[randomSpace] = 2
+            startingTwosPlaced = startingTwosPlaced +1
+
+    return newBoard
+
+def drawBoard(board):
+    """Draws the board data structure on the screen."""
+    labels = []
+    for y in range(4):
+        for x in range(4):
+            tile = board[(x,y)]
+            labelForThisTile = str(tile).center(5)
+            labels.append(labelForThisTile)
 
     print("""
-    8|{7}|
-    7|{6}|
-    6|{5}|
-    5|{4}| 5|{12}|
-    4|{3}| 4|{11}|
-    3|{2}| 3|{10}| 3|{15}|
-    2|{1}| 2|{9}| 2|{14}|
-    1|{0}| 1|{8}| 1|{13}|
-     +------+ +------+ +------+
-        8L       5L       3L          
-    """.format(*waterDisplay))
+    +-----+-----+-----+-----+
+    |     |     |     |     |
+    |{}|{}|{}|{}|
+    |     |     |     |     |
+    +-----+-----+-----+-----+
+    |     |     |     |     |
+    |{}|{}|{}|{}|
+    |     |     |     |     |
+    +-----+-----+-----+-----+
+    |     |     |     |     |
+    |{}|{}|{}|{}|
+    |     |     |     |     |
+    +-----+-----+-----+-----+
+    |     |     |     |     |
+    |{}|{}|{}|{}|
+    |     |     |     |     |
+    +-----+-----+-----+-----+
+    """.format(*labels))
 
-    for waterAmount in waterInBucket.values():
-        if waterAmount == Goal:
-            print("Good job! You solved it in",steps, "steps!")
-            sys.exit()
+def getScore(board):
+    """Returns the sum of all the tiles on the board data structure."""
+    score = 0
+    for x in range(4):
+        for y in range(4):
+            if board[(x,y)] != BLANK:
+                score = score + board[(x,y)]
+    return score
 
-    print("You can:")
-    print("  (F)ill the bucket")
-    print("  (E)mpty the bucket")
-    print("  (P)our one bucket into another")
-    print("  (Q)uit")
+def combineTilesInColumn(column):
+    """The column is a list of four tile. Index 0 is the "bottom" of the column, and tiles are pulled "down" and combine if they are the same. For example, combineTilesInColumn([2, BLANK, 2, BLANK]) returns [4, BLANK, BLANK, BLANK]."""
 
+    combinedTiles = []
+    for i in range(4):
+        if column[i] != BLANK:
+            combinedTiles.append(column[i])
+
+    while len(combinedTiles) < 4:
+        combinedTiles.append(BLANK)
+
+    for i in range(3):
+        if combinedTiles[i] == combinedTiles[i+1]:
+            combinedTiles[i] *= 2
+            for aboveIndex in range(i+1,3):
+                combinedTiles[aboveIndex] = combinedTiles[aboveIndex+1]
+            combinedTiles[3] = BLANK
+    return combinedTiles
+
+def makeMove(board,move):
+    """Carries out the move on the board.The move argument is either 'W', 'A', 'S', or 'D' and the function returns the resulting board data structure."""
+    if move == "W":
+        allColumnsSpaces =  [[(0, 0), (0, 1), (0, 2), (0, 3)],
+                             [(1, 0), (1, 1), (1, 2), (1, 3)],
+                             [(2, 0), (2, 1), (2, 2), (2, 3)],
+                             [(3, 0), (3, 1), (3, 2), (3, 3)]]
+    elif move == "A":
+        allColumnsSpaces =  [[(0, 0), (1, 0), (2, 0), (3, 0)],
+                             [(0, 1), (1, 1), (2, 1), (3, 1)],
+                             [(0, 2), (1, 2), (2, 2), (3, 2)],
+                             [(0, 3), (1, 3), (2, 3), (3, 3)]]
+    elif move == "S":
+        allColumnsSpaces =  [[(0, 3), (0, 2), (0, 1), (0, 0)],
+                             [(1, 3), (1, 2), (1, 1), (1, 0)],
+                             [(2, 3), (2, 2), (2, 1), (2, 0)],
+                             [(3, 3), (3, 2), (3, 1), (3, 0)]]
+    elif move == "D":
+        allColumnsSpaces = [[(3, 0), (2, 0), (1, 0), (0, 0)],
+                            [(3, 1), (2, 1), (1, 1), (0, 1)],
+                            [(3, 2), (2, 2), (1, 2), (0, 2)],
+                            [(3, 3), (2, 3), (1, 3), (0, 3)]]
+
+    boardAfterMove = {}
+    for columnSpaces in allColumnsSpaces:
+        firstTileSpace = columnSpaces[0]
+        secondTileSpace = columnSpaces[1]
+        thirdTileSpace = columnSpaces[2]
+        fourthTileSpace = columnSpaces[3]
+
+        firstTile = board[firstTileSpace]
+        secondTile = board[secondTileSpace]
+        thirdTile = board[thirdTileSpace]
+        fourthTile = board[fourthTileSpace]
+
+        column = [firstTile,secondTile,thirdTile,fourthTile]
+        combinedTilesColumn = combineTilesInColumn(column)
+
+        boardAfterMove[firstTileSpace] = combinedTilesColumn[0]
+        boardAfterMove[secondTileSpace] = combinedTilesColumn[1]
+        boardAfterMove[thirdTileSpace] = combinedTilesColumn[2]
+        boardAfterMove[fourthTileSpace] = combinedTilesColumn[3]
+
+    return boardAfterMove
+
+def askForPlayerMove():
+    """Asks the player for the direction of their next move (or quit). Ensures they enter a valid move: either 'W', 'A', 'S' or 'D'."""
+    print("Enter move: (WASD or Q to quit)")
     while True:
         move = input("> ").upper()
-        if move == "QUIT" or move == "Q":
-            print("Thanks for playing!")
+        if move == "Q":
+            print("Thanks for playing")
             sys.exit()
+        if move in ("W","A","S","D"):
+            return move
+        else:
+            print('Enter one of "W", "A", "S", "D", or "Q".')
 
-        if move in ("F","E","P"):
-            break
-        print("Enter F,E,P or Q")
 
+def addTwoToBoard(board):
+    """Adds a new 2 tile randomly to the board."""
     while True:
-        print("Select a bucket 8,5,3 or QUIT")
-        srcBucket = input("> ").upper()
+        randomSpace = (random.randint(0,3),random.randint(0,3))
+        if board[randomSpace] == BLANK:
+            board[randomSpace] = 2
+            return
 
-        if srcBucket == "QUIT":
-            print("Thanks for playing!")
-            sys.exit()
+def isFull(board):
+    """Returns True if the board data structure has no blanks."""
+    for x in range(4):
+        for y in range(4):
+            if board[(x,y)] == BLANK:
+                return False
+    return True
 
-        if srcBucket in ("8","5","3"):
-            break
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit()
 
-    if move == "F":
-        srcBucketSize = int(srcBucket)
-        waterInBucket[srcBucket] = srcBucketSize
-        steps += 1
-
-    elif move == "E":
-        waterInBucket[srcBucket] = 0
-        steps +=1
-
-    elif move == "P":
-        while True:
-            print("Select a bucket to pour into: 8,5 or 3")
-            dstBucket = input("> ").upper()
-            if dstBucket in ("8","5","3"):
-                break
-
-        dstBucketSize = int(dstBucket)
-        emptySpaceInDstBucket = dstBucketSize - waterInBucket[dstBucket]
-        waterInSrcBucket = waterInBucket[srcBucket]
-        amountToPour = min(emptySpaceInDstBucket,waterInSrcBucket)
-
-        waterInBucket[srcBucket] -= amountToPour
-
-        waterInBucket[dstBucket] += amountToPour
-        steps += 1
-
-    elif move == "C":
-        pass
