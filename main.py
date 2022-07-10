@@ -1,49 +1,68 @@
-import random , sys
+All_Spaces = ["1","2","3","4","5","6","7","8","9"]
+X,O,Blank = "X","O"," "
 
-QUESTIONS = [
-    {'question': "How many times can you take 2 apples from a pile of 10 apples?", 'answer': "Once. Then you have a pile of 8 apples.",'accept': ['once', 'one', '1']},
-    {'question': 'What begins with "e" and ends with "e" but only has one letter in it?','answer': "An envelope.",'accept': ['envelope']},
-    {'question': "Is it possible to draw a square with three sides?",'answer': "Yes. All squares have three sides. They also have a fourth side.",'accept': ['yes']},
-    {'question': "What does a towel get as it dries?",'answer': "Wet.",'accept': ['wet']},
-    {'question': "Which letter of the alphabet makes honey?",'answer': "None. A bee is an insect, not a letter.",'accept': ['no', 'none', 'not']},
-    {'question': "What kind of vehicle has four wheels and flies?",'answer': "An airplane.",'accept': ['airplane', 'plane']},
-]
+def main():
+    print("Welcome to tic tac toe game")
+    gameBoard = getBlankBoard()
+    currentPlayer , nextPlayer = X , O
 
-CORRECT_TEXT = ['Correct!', 'That is right.', "You're right.",'You got it.', 'Righto!']
-INCORRECT_TEXT = ['Incorrect!', "Nope, that isn't it.", 'Nope.','Not quite.', 'You missed it.']
+    while True:
+        print(getBoardStr(gameBoard))
+        move = None
+        while not isValidSpace(gameBoard,move):
+            print("What is {}\'s move? (1-9)".format(currentPlayer))
+            move = input("> ")
+        updateBoard(gameBoard,move,currentPlayer)
 
-print('''Trick Questions, by asiancart''')
-input('Press Enter to begin...')
-random.shuffle(QUESTIONS)
-score = 0
+        if isWinner(gameBoard,currentPlayer):
+            print(getBoardStr(gameBoard))
+            print(currentPlayer+ " has won the game")
+            break
+        elif isBoardFull(gameBoard):
+            print(getBoardStr(gameBoard))
+            print("The game is a tie")
+            break
+        currentPlayer,nextPlayer = nextPlayer,currentPlayer
+    print("Thanks for playing!")
 
-for questionNumber, qa in enumerate(QUESTIONS):
-    print('\n' * 40)
-    print('Question:', questionNumber + 1)
-    print('Score:', score, '/', len(QUESTIONS))
-    print('QUESTION:', qa['question'])
-    response = input(' ANSWER: ').lower()
+def getBlankBoard():
+    board = {}
+    for space in All_Spaces:
+        board[space] = Blank
+    return board
 
-    if response == 'quit':
-        print('Thanks for playing!')
-        sys.exit()
+def getBoardStr(board):
+    return """
+    {} |{} |{}    1 2 3
+    --+--+--
+    {} |{} |{}    4 5 6
+    --+--+--
+    {} |{} |{}    7 8 9""".format(board["1"],board["2"],board["3"],
+                             board["4"],board["5"],board["6"],
+                             board["7"],board["8"],board["9"])
 
-    correct = False
-    for acceptanceWord in qa['accept']:
-        if acceptanceWord in response:
-            correct = True
+def isValidSpace(board,space):
+    return space in All_Spaces and board[space] == Blank
 
-    if correct:
-        text = random.choice(CORRECT_TEXT)
-        print(text, qa['answer'])
-        score += 1
-    else:
-        text = random.choice(INCORRECT_TEXT)
-        print(text, 'The answer is:', qa['answer'])
-    response = input('Press Enter for the next question...').lower()
+def isWinner(board,player):
+    b ,p = board,player
+    return ((b['1'] == b['2'] == b['3'] == p) or
+            (b['4'] == b['5'] == b['6'] == p) or
+            (b['7'] == b['8'] == b['9'] == p) or
+            (b['1'] == b['4'] == b['7'] == p) or
+            (b['2'] == b['5'] == b['8'] == p) or
+            (b['3'] == b['6'] == b['9'] == p) or
+            (b['3'] == b['5'] == b['7'] == p) or
+            (b['1'] == b['5'] == b['9'] == p))
 
-    if response == 'quit':
-        print('Thanks for playing!')
-        sys.exit()
+def isBoardFull(board):
+    for space in All_Spaces:
+        if board[space] == Blank:
+            return False
+    return True
 
-print("That's all the questions. Thanks for playing!")
+def updateBoard(board,space,mark):
+    board[space] = mark
+
+if __name__ == "__main__":
+    main()
