@@ -1,231 +1,174 @@
-import random,sys,time
+import random , sys
 
 try:
     import bext
 except ImportError:
-    print('This program requires the bext module.')
+    print('This program requires the bext module')
     sys.exit()
 
-WIDTH, HEIGHT = bext.size()
-WIDTH -= 1
 
-NUM_KELP = 2
-NUM_FISH = 10
-NUM_BUBBLERS = 1
-FRAMES_PER_SECOND = 4
+BOARD_WIDTH = 16
+BOARD_HEIGHT = 14
+MOVES_PER_GAME = 20
 
-FISH_TYPES = [
-    {"right":  ['><>'], 'left': ['<><']},
-    {'right': ['>||>'], 'left': ['<||<']},
-    {'right': ['>))>'], 'left': ['<[[<']},
-    {'right': ['>||o', '>||.'], 'left': ['o||<', '.||<']},
-    {'right': ['>))o', '>)).'], 'left': ['o[[<', '.[[<']},
-    {'right': ['>-==>'], 'left': ['<==-<']},
-    {'right': [r'>\\>'], 'left': ['<//<']},
-    {'right': ['><)))*>'], 'left': ['<*(((><']},
-    {'right': ['}-[[[*>'], 'left': ['<*]]]-{']},
-    {'right': [']-<)))b>'], 'left': ['<d(((>-[']},
-    {'right': ['><XXX*>'], 'left': ['<*XXX><']},
-    {'right': ['_.-._.-^=>', '.-._.-.^=>','-._.-._^=>', '._.-._.^=>'],
-     'left': ['<=^-._.-._', '<=^.-._.-.','<=^_.-._.-', '<=^._.-._.']},
-]
+HEART = chr(9829)
+DIAMOND = chr(9830)
+SPADE = chr(9824)
+CLUB = chr(9827)
+BALL = chr(9679)
+TRIANGLE = chr(9650)
 
-LONGEST_FISH_LENGTH = 10
-LEFT_EDGE = 0
-RIGHT_EDGE = WIDTH - 1 - LONGEST_FISH_LENGTH
-TOP_EDGE = 0
-BOTTOM_EDGE = HEIGHT - 2
+BLOCK = chr(9608)
+LEFTRIGHT = chr(9472)
+UPDOWN = chr(9474)
+DOWNRIGHT = chr(9484)
+DOWNLEFT = chr(9488)
+UPRIGHT = chr(9492)
+UPLEFT = chr(9496)
+
+TILE_TYPES = (0,1,2,3,4,5)
+COLORS_MAP ={0: "red", 1: "green", 2: "blue", 3: "yellow", 4: "cyan", 5: "purple"}
+COLOR_MODE = "color mode"
+SHAPES_MAP = {0: HEART, 1: TRIANGLE, 2: DIAMOND,3: BALL, 4: CLUB, 5: SPADE}
+SHAPE_MODE = "shape mode"
 
 def main():
-    global FISHES,BUBBLERS,BUBBLES,KELPS,STEP
-    bext.bg('black')
+    bext.bg("black")
+    bext.fg("white")
     bext.clear()
+    print("""flooder by asiancart""")
+    print('Do you want to play in colorblind mode? Y/N')
+    response = input('> ')
+    if response.upper().startswith("Y"):
+        displayMode = SHAPE_MODE
+    else:
+        displayMode = COLOR_MODE
 
-    FISHES = []
-    for i in range(NUM_FISH):
-        FISHES.append(generateFish())
+    gameBoard = getNewBoard()
+    movesLeft = MOVES_PER_GAME
 
-    BUBBLERS = []
-    for i in range(NUM_BUBBLERS):
-        BUBBLERS.append(random.randint(LEFT_EDGE,RIGHT_EDGE))
-
-    BUBBLES = []
-
-    KELPS = []
-    for i in range(NUM_KELP):
-        kelpx = random.randint(LEFT_EDGE,RIGHT_EDGE)
-        kelp = {'x': kelpx, 'segments': []}
-
-        for i in range(random.randint(6,HEIGHT-1)):
-            kelp['segments'].append(random.choice(['(', ')']))
-        KELPS.append(kelp)
-
-    STEP = 1
     while True:
-        simulateAquarium()
-        drawAquarium()
-        time.sleep(1 / FRAMES_PER_SECOND)
-        clearAquarium()
-        STEP += 1
+        displayBoard(gameBoard,displayMode)
 
-def getRandomColor():
-    return random.choice(('black', 'red', 'green', 'yellow', 'blue','purple', 'cyan', 'white'))
+        print("Moves left: ",movesLeft)
+        playerMove = askForPlayerMove(displayMode)
+        changeTile(playerMove,gameBoard,0,0)
+        movesLeft -=1
 
-def generateFish():
-    fishType = random.choice(FISH_TYPES)
+        if hasWon(gameBoard):
+            displayBoard(gameBoard,displayMode)
+            print("You have won")
+            break
+        elif movesLeft == 0:
+            displayBoard(gameBoard,displayMode)
+            print("You have run out of moves!")
+            break
 
-    colorPattern = random.choice(('random', 'head-tail', 'single'))
-    fishLength = len(fishType['right'][0])
-    if colorPattern == 'random':
-        colors = []
-        for i in range(fishLength):
-            colors.append(getRandomColor())
-    if colorPattern == 'single' or colorPattern == 'head-tail':
-        colors = [getRandomColor()] * fishLength
-    if colorPattern == 'head-tail':
-        headTailColor = getRandomColor()
-        colors[0] = headTailColor
-        colors[-1] = headTailColor
+def getNewBoard():
+    board = {}
 
-    fish = {'right': fishType['right'],
-            'left': fishType['left'],
-            'colors': colors,
-            'hSpeed': random.randint(1, 6),
-            'vSpeed': random.randint(5, 15),
-            'timeToHDirChange': random.randint(10, 60),
-            'timeToVDirChange': random.randint(2, 20),
-            'goingRight': random.choice([True, False]),
-            'goingDown': random.choice([True, False])}
+    for x in range(BOARD_WIDTH):
+        for y in range(BOARD_HEIGHT):
+            board[(x,y)] = random.choice(TILE_TYPES)
 
-    fish['x'] = random.randint(0, WIDTH - 1 - LONGEST_FISH_LENGTH)
-    fish['y'] = random.randint(0, HEIGHT - 2)
-    return fish
+    for i in range(BOARD_WIDTH*BOARD_HEIGHT):
+        x = random.randint(0,BOARD_WIDTH-2)
+        y = random.randint(0,BOARD_HEIGHT-1)
+        board[(x+1,y)] = board[(x,y)]
+    return board
 
-def simulateAquarium():
-    global FISHES, BUBBLERS, BUBBLES, KELP, STEP
+def displayBoard(board,displayMode):
+    bext.fg("white")
+    print(DOWNRIGHT+(LEFTRIGHT*BOARD_WIDTH)+ DOWNLEFT)
 
-    for fish in FISHES:
-        if STEP % fish['hSpeed'] == 0:
-            if fish['goingRight']:
-                if fish['x'] != RIGHT_EDGE:
-                    fish['x'] += 1
-                else:
-                    fish['goingRight'] = False
-                    fish['colors'].reverse()
-            else:
-                if fish['x'] != LEFT_EDGE:
-                    fish['x'] -= 1
-                else:
-                    fish['goingRight'] = True
-                    fish['colors'].reverse()
-
-        fish['timeToHDirChange'] -= 1
-        if fish['timeToHDirChange'] == 0:
-            fish['timeToHDirChange'] = random.randint(10,60)
-            fish['goingRight'] = not fish['goingRight']
-
-        if STEP % fish['vSpeed'] == 0:
-            if fish['goingDown']:
-                if fish['y'] != BOTTOM_EDGE:
-                    fish['y'] += 1
-                else:
-                    fish['goingDown'] = False
-            else:
-                if fish['y'] != TOP_EDGE:
-                    fish['y'] -= 1
-                else:
-                    fish['goingDown'] = True
-
-        fish['timeToVDirChange'] -= 1
-        if fish['timeToVDirChange'] == 0:
-            fish['timeToVDirChange'] = random.randint(2,20)
-            fish['goingDown'] = not fish['goingDown']
-
-    for bubbler in BUBBLERS:
-        if random.randint(1,5) == 1:
-            BUBBLES.append({'x': bubbler, 'y':HEIGHT-2})
-
-    for bubble in BUBBLES:
-        diceRoll = random.randint(1,6)
-        if (diceRoll== 1) and (bubble['x'] != LEFT_EDGE):
-            bubble['x'] -= 1
-        elif (diceRoll == 2) and (bubble['x'] != RIGHT_EDGE):
-            bubble['x'] += 1
-
-        bubble['y'] -= 1
-
-    for i in range(len(BUBBLES)-1,-1,-1):
-        if BUBBLES[i]['y'] == TOP_EDGE:
-            del BUBBLES[i]
-
-    for kelp in KELPS:
-        for i, kelpSegment in enumerate(kelp['segments']):
-            if random.randint(1,20) == 1:
-                if kelpSegment == '(':
-                    kelp['segments'][i] = ')'
-                elif kelpSegment == ')':
-                    kelp['segments'][i] = '('
-
-def drawAquarium():
-    global FISHES, BUBBLERS, BUBBLES, KELP, STEP
-
-    bext.fg('white')
-    bext.goto(0,0)
-    print('Fish Tank, by asiancart')
-
-    bext.fg('white')
-    for bubble in BUBBLES:
-        bext.goto(bubble['x'], bubble['y'])
-        print(random.choice(('o', 'O')), end='')
-
-    for fish in FISHES:
-        bext.goto(fish['x'], fish['y'])
-
-        if fish['goingRight']:
-            fishText = fish['right'][STEP % len(fish['right'])]
+    for y in range(BOARD_HEIGHT):
+        bext.fg("white")
+        if y == 0:
+            print(">", end="")
         else:
-            fishText = fish['left'][STEP % len(fish['left'])]
+            print(UPDOWN,end="")
 
-        for i, fishPart in enumerate(fishText):
-            bext.fg(fish['colors'][i])
-            print(fishPart, end='')
+        for x in range(BOARD_WIDTH):
+            bext.fg(COLORS_MAP[board[(x,y)]])
+            if displayMode == COLOR_MODE:
+                print(BLOCK, end='')
+            elif displayMode == SHAPE_MODE:
+                print(SHAPE_MAP[board[(x,y)]],end="")
 
-    bext.fg('green')
-    for kelp in KELPS:
-        for i, kelpSegment in enumerate(kelp['segments']):
-            if kelpSegment == '(':
-                bext.goto(kelp['x'], BOTTOM_EDGE - i)
-            elif kelpSegment == ')':
-                bext.goto(kelp['x'] + 1, BOTTOM_EDGE - i)
-            print(kelpSegment, end='')
+        bext.fg("white")
+        print(UPDOWN)
+    print(UPRIGHT+ (LEFTRIGHT*BOARD_WIDTH)+ UPLEFT)
 
-    bext.fg('yellow')
-    bext.goto(0, HEIGHT - 1)
-    print(chr(9617) * (WIDTH - 1), end='')
+def askForPlayerMove(displayMode):
+    while True:
+        bext.fg("white")
+        print("Chose one of ", end="")
 
-    sys.stdout.flush()
+        if displayMode== COLOR_MODE:
+            bext.fg("red")
+            print('(R)ed ', end='')
+            bext.fg("green")
+            print('(G)reen ', end='')
+            bext.fg("blue")
+            print('(B)lue ', end='')
+            bext.fg("yellow")
+            print('(Y)ellow ', end='')
+            bext.fg("cyan")
+            print('(C)yan ', end='')
+            bext.fg("purple")
+            print('(P)urple ', end='')
+        else:
+            bext.fg("red")
+            print('(H)eart, ', end='')
+            bext.fg("green")
+            print('(T)riangle, ', end='')
+            bext.fg("blue")
+            print('(D)iamond, ', end='')
+            bext.fg("yellow")
+            print('(B)all, ', end='')
+            bext.fg("cyan")
+            print('(C)lub, ', end='')
+            bext.fg("purple")
+            print('(S)pade, ', end='')
+        bext.fg("white")
+        print('or QUIT:')
+        response = input("> ").upper()
+        if response == "QUIT":
+            print("Thanks for playing!")
+            sys.exit()
+        if displayMode == COLOR_MODE:
+            return {'R': 0, 'G': 1, 'B': 2,'Y': 3, 'C': 4, 'P': 5}[response]
+        if displayMode == SHAPE_MODE and response in tuple('HTDBCS'):
+            return {'H': 0, 'T': 1, 'D': 2,'B': 3, 'C': 4, 'S': 5}[response]
 
-def clearAquarium():
-    global FISHES, BUBBLERS, BUBBLES, KELP
+def changeTile(tileType,board,x,y,charToChange=None):
+    if x == 0 and y == 0:
+        charToChange = board[(x,y)]
+        if tileType == charToChange:
+            return
 
-    for bubble in BUBBLES:
-        bext.goto(bubble['x'], bubble['y'])
-        print(' ', end='')
+    board[(x,y)]=tileType
 
-    for fish in FISHES:
-        bext.goto(fish['x'], fish['y'])
+    if x > 0 and board[(x - 1, y)] == charToChange:
+        changeTile(tileType, board, x - 1, y, charToChange)
+    if y > 0 and board[(x, y - 1)] == charToChange:
+        changeTile(tileType, board, x, y - 1, charToChange)
+    if x < BOARD_WIDTH - 1 and board[(x + 1, y)] == charToChange:
+        changeTile(tileType, board, x + 1, y, charToChange)
+    if y < BOARD_HEIGHT - 1 and board[(x, y + 1)] == charToChange:
+        changeTile(tileType, board, x, y + 1, charToChange)
 
-        print(' ' * len(fish['left'][0]), end='')
+def hasWon(board):
+    tile = board[(0,0)]
 
-    for kelp in KELPS:
-        for i, kelpSegment in enumerate(kelp['segments']):
-            bext.goto(kelp['x'], HEIGHT - 2 - i)
-            print(' ', end='')
+    for x in range(BOARD_WIDTH):
+        for y in range(BOARD_HEIGHT):
+            if board[(x,y)] != tile:
+                return False
+    return True
 
-    sys.stdout.flush()
+if __name__ == "__main__":
+    main()
 
-if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        sys.exit()
+
+
