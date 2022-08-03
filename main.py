@@ -1,4 +1,4 @@
-import random , sys
+import random, sys, time
 
 try:
     import bext
@@ -6,169 +6,80 @@ except ImportError:
     print('This program requires the bext module')
     sys.exit()
 
+WIDTH = 79
+HEIGHT = 22
 
-BOARD_WIDTH = 16
-BOARD_HEIGHT = 14
-MOVES_PER_GAME = 20
+TREE = 'A'
+FIRE = 'W'
+EMPTY = ' '
 
-HEART = chr(9829)
-DIAMOND = chr(9830)
-SPADE = chr(9824)
-CLUB = chr(9827)
-BALL = chr(9679)
-TRIANGLE = chr(9650)
+INITIAL_TREE_DENSITY = 0.20
+GROW_CHANCE = 0.01
+FIRE_CHANCE = 0.01
 
-BLOCK = chr(9608)
-LEFTRIGHT = chr(9472)
-UPDOWN = chr(9474)
-DOWNRIGHT = chr(9484)
-DOWNLEFT = chr(9488)
-UPRIGHT = chr(9492)
-UPLEFT = chr(9496)
-
-TILE_TYPES = (0,1,2,3,4,5)
-COLORS_MAP ={0: "red", 1: "green", 2: "blue", 3: "yellow", 4: "cyan", 5: "purple"}
-COLOR_MODE = "color mode"
-SHAPES_MAP = {0: HEART, 1: TRIANGLE, 2: DIAMOND,3: BALL, 4: CLUB, 5: SPADE}
-SHAPE_MODE = "shape mode"
+PAUSE_LENGTH = 0.5
 
 def main():
-    bext.bg("black")
-    bext.fg("white")
+    forest = createNewForest()
     bext.clear()
-    print("""flooder by asiancart""")
-    print('Do you want to play in colorblind mode? Y/N')
-    response = input('> ')
-    if response.upper().startswith("Y"):
-        displayMode = SHAPE_MODE
-    else:
-        displayMode = COLOR_MODE
-
-    gameBoard = getNewBoard()
-    movesLeft = MOVES_PER_GAME
 
     while True:
-        displayBoard(gameBoard,displayMode)
+        displayForest(forest)
 
-        print("Moves left: ",movesLeft)
-        playerMove = askForPlayerMove(displayMode)
-        changeTile(playerMove,gameBoard,0,0)
-        movesLeft -=1
+        nextForest = {'width': forest["width"],
+                      'height': forest["height"]}
 
-        if hasWon(gameBoard):
-            displayBoard(gameBoard,displayMode)
-            print("You have won")
-            break
-        elif movesLeft == 0:
-            displayBoard(gameBoard,displayMode)
-            print("You have run out of moves!")
-            break
+        for x in range(forest["width"]):
+            for y in range(forest["height"]):
+                if (x,y) in nextForest:
+                    continue
 
-def getNewBoard():
-    board = {}
+                if ((forest[(x,y)] == EMPTY) and (random.random() <= GROW_CHANCE)):
+                    nextForest[(x,y)] = TREE
+                elif ((forest[(x,y)] == TREE) and (random.random() <= FIRE_CHANCE)):
+                    nextForest[(x,y)] = FIRE
+                elif forest[(x,y)] == FIRE:
+                    for ix in range(-1,2):
+                        for iy in range(-1,2):
+                            if forest.get((x+ix,y+iy)) == TREE:
+                                nextForest[(x+ix,y+iy)] = FIRE
+                    nextForest[(x,y)] = EMPTY
+                else:
+                    nextForest[(x,y)] = forest[(x,y)]
+        forest = nextForest
 
-    for x in range(BOARD_WIDTH):
-        for y in range(BOARD_HEIGHT):
-            board[(x,y)] = random.choice(TILE_TYPES)
+        time.sleep(PAUSE_LENGTH)
 
-    for i in range(BOARD_WIDTH*BOARD_HEIGHT):
-        x = random.randint(0,BOARD_WIDTH-2)
-        y = random.randint(0,BOARD_HEIGHT-1)
-        board[(x+1,y)] = board[(x,y)]
-    return board
+def createNewForest():
+    forest = {"width": WIDTH, "height": HEIGHT}
+    for x in range(WIDTH):
+        for y in range(HEIGHT):
+            if (random.random() * 100) <= INITIAL_TREE_DENSITY:
+                forest[(x,y)] = TREE
+            else:
+                forest[(x,y)] = EMPTY
+    return forest
 
-def displayBoard(board,displayMode):
-    bext.fg("white")
-    print(DOWNRIGHT+(LEFTRIGHT*BOARD_WIDTH)+ DOWNLEFT)
-
-    for y in range(BOARD_HEIGHT):
-        bext.fg("white")
-        if y == 0:
-            print(">", end="")
-        else:
-            print(UPDOWN,end="")
-
-        for x in range(BOARD_WIDTH):
-            bext.fg(COLORS_MAP[board[(x,y)]])
-            if displayMode == COLOR_MODE:
-                print(BLOCK, end='')
-            elif displayMode == SHAPE_MODE:
-                print(SHAPE_MAP[board[(x,y)]],end="")
-
-        bext.fg("white")
-        print(UPDOWN)
-    print(UPRIGHT+ (LEFTRIGHT*BOARD_WIDTH)+ UPLEFT)
-
-def askForPlayerMove(displayMode):
-    while True:
-        bext.fg("white")
-        print("Chose one of ", end="")
-
-        if displayMode== COLOR_MODE:
-            bext.fg("red")
-            print('(R)ed ', end='')
-            bext.fg("green")
-            print('(G)reen ', end='')
-            bext.fg("blue")
-            print('(B)lue ', end='')
-            bext.fg("yellow")
-            print('(Y)ellow ', end='')
-            bext.fg("cyan")
-            print('(C)yan ', end='')
-            bext.fg("purple")
-            print('(P)urple ', end='')
-        else:
-            bext.fg("red")
-            print('(H)eart, ', end='')
-            bext.fg("green")
-            print('(T)riangle, ', end='')
-            bext.fg("blue")
-            print('(D)iamond, ', end='')
-            bext.fg("yellow")
-            print('(B)all, ', end='')
-            bext.fg("cyan")
-            print('(C)lub, ', end='')
-            bext.fg("purple")
-            print('(S)pade, ', end='')
-        bext.fg("white")
-        print('or QUIT:')
-        response = input("> ").upper()
-        if response == "QUIT":
-            print("Thanks for playing!")
-            sys.exit()
-        if displayMode == COLOR_MODE:
-            return {'R': 0, 'G': 1, 'B': 2,'Y': 3, 'C': 4, 'P': 5}[response]
-        if displayMode == SHAPE_MODE and response in tuple('HTDBCS'):
-            return {'H': 0, 'T': 1, 'D': 2,'B': 3, 'C': 4, 'S': 5}[response]
-
-def changeTile(tileType,board,x,y,charToChange=None):
-    if x == 0 and y == 0:
-        charToChange = board[(x,y)]
-        if tileType == charToChange:
-            return
-
-    board[(x,y)]=tileType
-
-    if x > 0 and board[(x - 1, y)] == charToChange:
-        changeTile(tileType, board, x - 1, y, charToChange)
-    if y > 0 and board[(x, y - 1)] == charToChange:
-        changeTile(tileType, board, x, y - 1, charToChange)
-    if x < BOARD_WIDTH - 1 and board[(x + 1, y)] == charToChange:
-        changeTile(tileType, board, x + 1, y, charToChange)
-    if y < BOARD_HEIGHT - 1 and board[(x, y + 1)] == charToChange:
-        changeTile(tileType, board, x, y + 1, charToChange)
-
-def hasWon(board):
-    tile = board[(0,0)]
-
-    for x in range(BOARD_WIDTH):
-        for y in range(BOARD_HEIGHT):
-            if board[(x,y)] != tile:
-                return False
-    return True
+def displayForest(forest):
+    bext.goto(0,0)
+    for y in range(forest["height"]):
+        for x in range(forest["width"]):
+            if forest[(x,y)] == TREE:
+                bext.fg("green")
+                print(TREE,end="")
+            elif forest[(x,y)] == FIRE:
+                bext.fg("red")
+                print(FIRE,end="")
+            elif forest[(x,y)] == EMPTY:
+                print(EMPTY,end="")
+        print()
+    bext.fg("reset")
+    print("Grow chance: {}%".format(GROW_CHANCE*100),end="")
+    print('Lightning chance: {}% '.format(FIRE_CHANCE * 100), end='')
+    print('Press Ctrl-C to quit.')
 
 if __name__ == "__main__":
-    main()
-
-
-
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit()
